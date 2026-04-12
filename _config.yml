@@ -1,0 +1,21 @@
+title: dsdffgh
+description: A personal blog about life, thoughts, and everything in between.
+url: "https://dsdffgh.github.io"
+baseurl: ""
+
+permalink: /:year/:month/:day/:title/
+
+markdown: kramdown
+highlighter: rouge
+
+exclude:
+  - Gemfile
+  - Gemfile.lock
+  - README.md
+
+defaults:
+  - scope:
+      path: ""
+      type: "posts"
+    values:
+      layout: "post"

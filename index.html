@@ -1,0 +1,23 @@
+---
+layout: default
+title: Home
+---
+<section class="home-intro">
+  <p>{{ site.description }}</p>
+</section>
+
+<section>
+  <ul class="post-list">
+    {% for post in site.posts %}
+    <li class="post-list-item">
+      <a href="{{ post.url | relative_url }}">
+        <h2 class="post-list-title">{{ post.title }}</h2>
+      </a>
+      <span class="post-list-date">{{ post.date | date: "%B %-d, %Y" }}</span>
+      {% if post.excerpt %}
+      <p class="post-list-excerpt">{{ post.excerpt | strip_html | truncatewords: 30 }}</p>
+      {% endif %}
+    </li>
+    {% endfor %}
+  </ul>
+</section>
