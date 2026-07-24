@@ -45,12 +45,17 @@ KVM 环境下还需要区分托管模式和非托管模式。托管模式下，l
 
 ## 参考资料
 
-[^redhat-pci]: Red Hat Documentation, [Chapter 15. PCI passthrough](https://docs.redhat.com/en/documentation/red_hat_enterprise_linux/5/html/virtualization/chap-virtualization-pci_passthrough).
+[^redhat-pci]: Chapter 15. PCI passthrough \| Virtualization Guide \| Red Hat Enterprise Linux \| 5 \| Red Hat Documentation  
+    URL: <https://docs.redhat.com/en/documentation/red_hat_enterprise_linux/5/html/virtualization/chap-virtualization-pci_passthrough>
 
-[^qemu-passthrough]: CSDN, [linux QEMU 的 PCI 设备直通（pass through）](https://blog.csdn.net/shenjunpeng/article/details/154060519).
+[^qemu-passthrough]: linux QEMU 的 PCI 设备直通（pass through）_qemu 单显卡直通-CSDN 博客  
+    URL: <https://blog.csdn.net/shenjunpeng/article/details/154060519>
 
-[^libvirt-pci]: CSDN, [libvirt 笔记 PCI 设备直通](https://blog.csdn.net/weixin_42834523/article/details/120544068).
+[^libvirt-pci]: libvirt 笔记 PCI 设备直通_libvirt pci 直通-CSDN 博客  
+    URL: <https://blog.csdn.net/weixin_42834523/article/details/120544068>
 
-[^xen-iommu]: XCP-ng Blog, [IOMMU paravirtualization for Xen](https://xcp-ng.org/blog/2024/04/18/iommu-paravirtualization-for-xen/).
+[^xen-iommu]: IOMMU paravirtualization for Xen  
+    URL: <https://xcp-ng.org/blog/2024/04/18/iommu-paravirtualization-for-xen/>
 
-[^lxc-gpu]: hellowood, [在 PVE 的 LXC 容器中直通核心显卡](https://blog.hellowood.dev/posts/%E5%9C%A8pve%E7%9A%84lxc%E5%AE%B9%E5%99%A8%E4%B8%AD%E7%9B%B4%E9%80%9A%E6%A0%B8%E5%BF%83%E6%98%BE%E5%8D%A1/).
+[^lxc-gpu]: 在 PVE 的 LXC 容器中直通核心显卡  
+    URL: <https://blog.hellowood.dev/posts/%E5%9C%A8pve%E7%9A%84lxc%E5%AE%B9%E5%99%A8%E4%B8%AD%E7%9B%B4%E9%80%9A%E6%A0%B8%E5%BF%83%E6%98%BE%E5%8D%A1/>

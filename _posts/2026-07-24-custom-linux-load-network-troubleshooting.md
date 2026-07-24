@@ -1,20 +1,20 @@
 ---
-title: "ACore Linux 加载与 Windows TAP 网络排查记录"
+title: "某定制 Linux 加载与 Windows TAP 网络排查记录"
 date: 2026-07-24
 categories: [virtualization, qemu]
-tags: ["ACore", "QEMU", "TAP", "Windows", "troubleshooting"]
+tags: ["custom Linux", "QEMU", "TAP", "Windows", "troubleshooting"]
 ---
 
 ## 1. 最终结果
 
-本文记录 2026-06-18 至 2026-06-22 从原始压缩包重建 QEMU、gos5、inter_linux 和 Linux kernel，逐段处理启动停滞，直到 Windows 宿主机可以 ping 通 ACore Linux 的实际过程。
+本文记录 2026-06-18 至 2026-06-22 从原始压缩包重建 QEMU、gos5、inter_linux 和 Linux kernel，逐段处理启动停滞，直到 Windows 宿主机可以 ping 通 某定制 Linux 的实际过程。
 
 ```text
 QEMU PID:          29988
 QEMU 网络后端:     TAP，tap0
 Windows tap0:      169.254.127.40/16
 MSL loader:        169.254.127.50:1118
-ACore Linux eth0:  169.254.127.51/16
+某定制 Linux eth0:  169.254.127.51/16
 Guest MAC:         2a:98:5a:42:00:00
 Windows ping:      4/4，0% 丢包
 ```
@@ -30,9 +30,9 @@ Windows ping:      4/4，0% 丢包
 最终证据：
 
 ```text
-串口: D:\temp\acore-original-repro-20260618-1705\serial-disable-display.log
-加载: D:\temp\acore-original-repro-20260618-1705\udp-load-disable-display.log
-构建: D:\temp\acore-original-repro-20260618-1705\build-disable-display.log
+串口: <local-workspace>\serial-disable-display.log
+加载: <local-workspace>\udp-load-disable-display.log
+构建: <local-workspace>\build-disable-display.log
 ```
 
 旧文档引用了另一组成功日志、过时的 kernel config 来源和不适用于本次最终运行的耗时。本文只采用上述新日志和当前 PID 29988。
@@ -40,26 +40,26 @@ Windows ping:      4/4，0% 丢包
 ## 2. 输入、目录和产物
 
 ```text
-QEMU 压缩包:  D:\zdk\code\virtual_platform.7z
-应用压缩包:  D:\software\ACoreMCICS_V0.3.1.1.3_20260227\gos5.zip
-kernel 包:    D:\zdk\code\ACoreLinuxSrc-Kernel-RTV1.3.0.0-Phytium.tar.gz
-复现目录:     D:\temp\acore-original-repro-20260618-1705
+QEMU 压缩包:  <source-archive-dir>\virtual_platform.7z
+应用压缩包:  <source-archive-dir>\gos5.zip
+kernel 包:    <source-archive-dir>\kernel.tar.gz
+复现目录:     <local-path>
 QEMU:         ...\qemu-source
 gos5:         ...\application\gos5
 inter_linux:  ...\application\inter_linux
-kernel 构建:  WSL ext4 /home/acore-final-20260622/.../kernel-source
+kernel 构建:  WSL ext4 <wsl-build-dir>
 ```
 
 最终 QEMU：
 
 ```text
-D:\temp\acore-original-repro-20260618-1705\qemu-source\build-repro\qemu-system-aarch64.exe
+<qemu-build-dir>\qemu-system-aarch64.exe
 ```
 
 最终镜像：
 
 ```text
-D:\temp\acore-original-repro-20260618-1705\application\inter_linux\armv8a_64\bin\gos5.bin
+<image-output-dir>\gos5.bin
 SHA-256: 5F6F746BE5FE6163A57A56987935DAA3556CC9DB495C00490B989697D67DF262
 ```
 
@@ -67,7 +67,7 @@ gos5 工程产物与 inter_linux 中的镜像 SHA-256 相同，证明加载的�
 
 ## 3. 启动阶段和地址
 
-同一串口依次包含 MSL、ACoreOSMCS/hypervisor 和 Linux 输出：
+同一串口依次包含 MSL、定制 hypervisor 和 Linux 输出：
 
 | 地址 | 阶段 | 用途 |
 | --- | --- | --- |
@@ -96,7 +96,7 @@ MAC:02-21-18-31-26-19
 5. 新停滞发生在 `ahci 31a40000.sata`。QEMU 没有实现 DT 中的两个 SATA 控制器。
 6. 在 `vmLinux.c` 中对即将传给 Linux 的内存 DTB 调用 `fdt_del_node()`，删除两个 SATA 节点后继续启动。原始 DTB 文件本身没有被改写。
 7. 启用 `initcall_debug ignore_loglevel loglevel=8`，识别出 `phytium_mci_driver_init` 进入后长期没有返回。
-8. 同样在运行期删除两个 MMC/MCI 节点后，原始 kernel/rootfs 到达 `acorelinux631 login:`。
+8. 同样在运行期删除两个 MMC/MCI 节点后，原始 kernel/rootfs 到达 `custom-linux login:`。
 
 ### 2026-06-22：kernel、rootfs 和网络
 
@@ -116,7 +116,7 @@ MAC:02-21-18-31-26-19
 
 ### 5.1 PSCI / GICv3
 
-PSCI 是 ARM 操作系统通过 SMC/HVC 请求 CPU on/off、suspend、reset 等服务的标准接口。GICv3 是中断控制器，负责 Distributor、Redistributor、SGI/PPI/SPI、timer interrupt 和 IPI。两者属于不同模块，但多核启动时会连续出现：PSCI 负责让 secondary CPU 进入指定入口，随后每个 CPU 都要通过 GICv3 redistributor 和 CPU interface 正常收中断。`psciLibInit` 位于 Linux EL1、ACore hypervisor/firmware 和 QEMU GIC/CPU 模型交界处，早于 Linux driver 和 rootfs。
+PSCI 是 ARM 操作系统通过 SMC/HVC 请求 CPU on/off、suspend、reset 等服务的标准接口。GICv3 是中断控制器，负责 Distributor、Redistributor、SGI/PPI/SPI、timer interrupt 和 IPI。两者属于不同模块，但多核启动时会连续出现：PSCI 负责让 secondary CPU 进入指定入口，随后每个 CPU 都要通过 GICv3 redistributor 和 CPU interface 正常收中断。`psciLibInit` 位于 Linux EL1、定制系统 hypervisor/firmware 和 QEMU GIC/CPU 模型交界处，早于 Linux driver 和 rootfs。
 
 QEMU 处理：
 
@@ -250,14 +250,14 @@ initcall phytium_display_init+0x0/0x60 returned 0 after 900 usecs
 ```text
 Windows host tap0
   <-> QEMU -netdev tap + cadence_gem NIC
-  <-> ACore virtual platform / netswitch
+  <-> 定制系统 virtual platform / netswitch
   <-> Linux guest virtio-mmio device
   <-> eth0
 ```
 
-QEMU 命令行里的设备是 `-net nic,model=cadence_gem,netdev=t0`，后端是 `tap0`。Linux guest 里看到的是 ACore 给 Linux 暴露的 `virtio_mmio@3b001000`，最终由 `virtio_net` driver 创建 `eth0`。串口里先有 ACore 侧 `virtio_net@gmac0` 和 MAC 地址，再有 Linux 侧 `virtio_mmio`、`virtio_net_driver_init` 和 `eth0`，对应的就是这条路径。
+QEMU 命令行里的设备是 `-net nic,model=cadence_gem,netdev=t0`，后端是 `tap0`。Linux guest 里看到的是 定制系统 给 Linux 暴露的 `virtio_mmio@3b001000`，最终由 `virtio_net` driver 创建 `eth0`。串口里先有 定制系统 侧 `virtio_net@gmac0` 和 MAC 地址，再有 Linux 侧 `virtio_mmio`、`virtio_net_driver_init` 和 `eth0`，对应的就是这条路径。
 
-只把 virtio transport 编入 kernel、把 `virtio_net` 留作 module，会让 `eth0` 的创建依赖 rootfs 中的 module 文件、module CRC、`depmod/modprobe` 和 init 脚本顺序。为了验证 QEMU TAP、ACore 网络转接、Linux driver 三者是否连通，本次把 `VIRTIO`、`VIRTIO_MMIO`、`VIRTIO_NET`、`FAILOVER`、`NET_FAILOVER` 都设为 built-in，让网卡在 kernel initcall 阶段创建。
+只把 virtio transport 编入 kernel、把 `virtio_net` 留作 module，会让 `eth0` 的创建依赖 rootfs 中的 module 文件、module CRC、`depmod/modprobe` 和 init 脚本顺序。为了验证 QEMU TAP、定制系统 网络转接、Linux driver 三者是否连通，本次把 `VIRTIO`、`VIRTIO_MMIO`、`VIRTIO_NET`、`FAILOVER`、`NET_FAILOVER` 都设为 built-in，让网卡在 kernel initcall 阶段创建。
 
 最终日志：
 
@@ -276,13 +276,13 @@ rootfs 的更新主要是为了放入静态 AArch64 `/codex-init`，并通过 `r
 
 | 查看对象 | 发现的关键信息 | 后续修改或验证 |
 | --- | --- | --- |
-| `D:\temp\acore-original-repro-20260618-1705\serial-disable-display.log` | `phytium_display_init` 后出现 `phytium_wait_cmd_done` timeout，call trace 指向 `phytium_phy_writel` 和 `pe220x_dp_hw_init_phy` | 不再把 PL011 当作失败点，转向 display driver 和 DT 绑定关系 |
+| `<local-workspace>\serial-disable-display.log` | `phytium_display_init` 后出现 `phytium_wait_cmd_done` timeout，call trace 指向 `phytium_phy_writel` 和 `pe220x_dp_hw_init_phy` | 不再把 PL011 当作失败点，转向 display driver 和 DT 绑定关系 |
 | `...\kernel-source\drivers\gpu\drm\phytium\phytium_display_drv.c` | `phytium_display_init()` 注册 `phytium_platform_driver`，该 initcall 与串口里的 `calling phytium_display_init` 对应 | 确认 panic 属于 Phytium display platform driver 初始化阶段 |
 | `...\kernel-source\drivers\gpu\drm\phytium\phytium_platform.c` | `display_of_match[]` 匹配 `.compatible = "phytium,dc"` | 在 DT 中查找 compatible 为 `phytium,dc` 的节点 |
 | `...\kernel-source\drivers\gpu\drm\phytium\pe220x_dp.c` | `pe220x_dp_hw_init_phy()` 内大量调用 `phytium_phy_writel()`，并通过 `phytium_wait_cmd_done()` 等待显示硬件回复 | 确认失败来自显示 PHY 寄存器访问，排除 console 和 rootfs |
 | 启动时打印出的 DT / 原始 DT | 找到 `/soc/dc@32000000`，compatible 为 `phytium,dc`，状态可被 Linux probe | 在 `vmLinux.c` 中增加运行期删除 `/soc/dc@32000000` |
-| `D:\temp\acore-original-repro-20260618-1705\application\gos5\src\vmLinux.c` | 已加载 DTB 地址为 `0xf2000000`；可调用 `fdt_path_offset()` 和 `fdt_del_node()` 修改内存 DTB；`bootiTest()` 使用这个 DTB 启动 Linux | 在 `bootiTest()` 前删除两个 SATA、两个 MMC 和一个 display 节点，并加入 `keep_bootcon rdinit=/codex-init init=/codex-init` |
-| `D:\temp\acore-original-repro-20260618-1705\build-kernel-wsl-ext4.log` | 最终构建日志显示 `CONFIG_FAILOVER=y`、`CONFIG_VIRTIO_NET=y`、`CONFIG_NET_FAILOVER=y`、`CONFIG_VIRTIO=y`、`CONFIG_VIRTIO_MMIO=y`，并记录最终 `Image` SHA-256 | 以 WSL ext4 构建日志作为最终 kernel 配置证据；Windows 展开树里的旧 `.config` 不作为最终产物依据 |
+| `<local-path>` | 已加载 DTB 地址为 `0xf2000000`；可调用 `fdt_path_offset()` 和 `fdt_del_node()` 修改内存 DTB；`bootiTest()` 使用这个 DTB 启动 Linux | 在 `bootiTest()` 前删除两个 SATA、两个 MMC 和一个 display 节点，并加入 `keep_bootcon rdinit=/codex-init init=/codex-init` |
+| `<local-workspace>\build-kernel-wsl-ext4.log` | 最终构建日志显示 `CONFIG_FAILOVER=y`、`CONFIG_VIRTIO_NET=y`、`CONFIG_NET_FAILOVER=y`、`CONFIG_VIRTIO=y`、`CONFIG_VIRTIO_MMIO=y`，并记录最终 `Image` SHA-256 | 以 WSL ext4 构建日志作为最终 kernel 配置证据；Windows 展开树里的旧 `.config` 不作为最终产物依据 |
 | 串口 DT 片段 | Linux guest 看到 `virtio_mmio@3b001000`，compatible 为 `virtio,mmio` | 确认 Linux 侧网卡路径是 `virtio-mmio -> virtio_net -> eth0` |
 | QEMU 命令行和 Windows TAP 状态 | QEMU 使用 `-netdev tap,ifname=tap0` 和 `-net nic,model=cadence_gem`，Windows `tap0` 为 `169.254.127.40/16` | 使用 TAP，保持 Windows、MSL loader、guest 在同一二层链路 |
 | rootfs 中新增的静态 `/codex-init` | PID 1 执行 `ip link set eth0 up` 和 `ip addr replace 169.254.127.51/16 dev eth0` | rootfs 更新只承担用户态 IP 配置和日志输出，driver 创建仍由 kernel built-in 完成 |
@@ -309,52 +309,52 @@ QEMU:
 gos5/inter_linux:
   ...\application\gos5\src\vmLinux.c
   ...\application\gos5\src\Image
-  ...\application\gos5\src\acore.rootfs.ext2.gz.u-boot
+  ...\application\gos5\src\custom.rootfs.ext2.gz.u-boot
   ...\application\gos5\CMakePresets.json
   ...\application\inter_linux\vars.cmake
 
 辅助流程:
   WSL kernel .config
   ...\network-final-work2\codex_init.c
-  C:\Users\qiyan\Documents\Codex\2026-05-19\skill-creator-c-users-qiyan-codex\acore_network_patch\Invoke-AcoreLinuxNetworkPatch.ps1
+  <script-dir>\Invoke-NetworkPatch.ps1
 ```
 
-`vmLinux.c` 设置最终 bootargs，并在 `bootiTest()` 前对地址 `0xf2000000` 的内存 DTB 调用 `fdt_del_node()`，删除两个 SATA、两个 MMC 和一个 display 节点。原始 `.dtb` 文件没有直接编辑；改变发生在传给 Linux 之前。CMake preset 和 `vars.cmake` 中的旧绝对路径改为当前 ACoreMCICS 与 temp 路径。
+`vmLinux.c` 设置最终 bootargs，并在 `bootiTest()` 前对地址 `0xf2000000` 的内存 DTB 调用 `fdt_del_node()`，删除两个 SATA、两个 MMC 和一个 display 节点。原始 `.dtb` 文件没有直接编辑；改变发生在传给 Linux 之前。CMake preset 和 `vars.cmake` 中的旧绝对路径改为当前定制应用包与临时工作目录。
 
 ## 8. 构建命令
 
 ### 8.1 kernel
 
 ```bash
-cd /home/acore-final-20260622/.../kernel-source
+cd <wsl-build-dir>
 scripts/config --enable VIRTIO --enable VIRTIO_MMIO --enable VIRTIO_NET --enable FAILOVER --enable NET_FAILOVER
 make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- olddefconfig
 make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- -j8 Image
-cp arch/arm64/boot/Image /mnt/d/temp/acore-original-repro-20260618-1705/application/gos5/src/Image
+cp arch/arm64/boot/Image <windows-mount-path>
 ```
 
-日志：`D:\temp\acore-original-repro-20260618-1705\build-kernel-wsl-ext4.log`。
+日志：`<local-workspace>\build-kernel-wsl-ext4.log`。
 
 ### 8.2 rootfs
 
 ```bash
 aarch64-linux-gnu-gcc -O2 -static -Wall -Wextra -o codex-init.bin codex_init.c
-debugfs -w -R 'rm /codex-init' acore.rootfs.ext2
-debugfs -w -R 'write codex-init.bin /codex-init' acore.rootfs.ext2
-debugfs -w -R 'set_inode_field /codex-init mode 0100755' acore.rootfs.ext2
-debugfs -w -R 'rm /sbin/init' acore.rootfs.ext2
-debugfs -w -R 'symlink /sbin/init /codex-init' acore.rootfs.ext2
-e2fsck -fn acore.rootfs.ext2
-gzip -n -9 -c acore.rootfs.ext2 > acore.rootfs.ext2.new.gz
-mkimage -A arm64 -O linux -T ramdisk -C gzip -n 'ACore rootfs' -d acore.rootfs.ext2.new.gz acore.rootfs.ext2.gz.u-boot.new
+debugfs -w -R 'rm /codex-init' custom.rootfs.ext2
+debugfs -w -R 'write codex-init.bin /codex-init' custom.rootfs.ext2
+debugfs -w -R 'set_inode_field /codex-init mode 0100755' custom.rootfs.ext2
+debugfs -w -R 'rm /sbin/init' custom.rootfs.ext2
+debugfs -w -R 'symlink /sbin/init /codex-init' custom.rootfs.ext2
+e2fsck -fn custom.rootfs.ext2
+gzip -n -9 -c custom.rootfs.ext2 > custom.rootfs.ext2.new.gz
+mkimage -A arm64 -O linux -T ramdisk -C gzip -n '定制系统 rootfs' -d custom.rootfs.ext2.new.gz custom.rootfs.ext2.gz.u-boot.new
 ```
 
 ### 8.3 gos5 后 inter_linux
 
 ```powershell
-$env:PATH = 'D:\software\ACoreMCICS_V0.3.1.1.3_20260227\host\gnu\gcc-13.2.0\aarch64\bin;D:\msys64\mingw64\bin;' + $env:PATH
-$build = 'D:\workspace\vscode_intead\codo-vscode-ext\scripts\codo_cmake_build.ps1'
-$app = 'D:\temp\acore-original-repro-20260618-1705\application'
+$env:PATH = '<toolchain-bin>' + $env:PATH
+$build = '<build-script-dir>\codo_cmake_build.ps1'
+$app = '<local-path>'
 Push-Location "$app\gos5"
 & $build -Action rebuild -ProjectPath "$app\gos5" -Config armv8a_64 -Jobs 4
 Pop-Location
@@ -363,33 +363,33 @@ Push-Location "$app\inter_linux"
 Pop-Location
 ```
 
-脚本从当前目录读取 `CMakePresets.json`。ACore GCC 的 `cc1.exe` 还依赖上述 PATH 顺序。
+脚本从当前目录读取 `CMakePresets.json`。交叉编译工具链的 `cc1.exe` 还依赖上述 PATH 顺序。
 
 ### 8.4 QEMU
 
 压缩包的旧 build 目录含原机器绝对路径，因此使用独立 `build-repro`。Meson 配置后：
 
 ```powershell
-& 'D:\msys64\mingw64\bin\ninja.exe' -C 'D:\temp\acore-original-repro-20260618-1705\qemu-source\build-repro' qemu-system-aarch64.exe
+& '<msys2>\ninja.exe' -C '<local-path>' qemu-system-aarch64.exe
 ```
 
-QEMU 启动时也要前置 `D:\msys64\mingw64\bin`，否则本机出现过 `0xC0000409`，只留下 `config file load OK`。
+QEMU 启动时也要前置 `<local-path>`，否则本机出现过 `0xC0000409`，只留下 `config file load OK`。
 
 ## 9. 启动与加载
 
 QEMU 核心参数：
 
 ```powershell
-$root = 'D:\temp\acore-original-repro-20260618-1705'
-$env:PATH = "D:\msys64\mingw64\bin;$env:PATH"
+$root = '<local-path>'
+$env:PATH = "<local-path>"
 & "$root\qemu-source\build-repro\qemu-system-aarch64.exe" -accel 'tcg,thread=multi' -smp 4 -atsConfig "$root\qemu-source\conf_fte2000.json" -m 2048 -M 'fte2000-board,secure=on' -net 'nic,model=cadence_gem,netdev=t0' -netdev 'tap,ifname=tap0,script=no,downscript=no,id=t0' -display none -monitor none -serial null -serial stdio
 ```
 
 MSL 加载：
 
 ```powershell
-Set-Location 'D:\workspace\vscode_intead\codo-vscode-ext'
-node -e "require('./out/test/vscodeTestHarness'); const { TargetUdpLoader } = require('./out/target/TargetUdpLoader'); (async () => { const conn={ip:'169.254.127.50',taPort:1118,timeout:20}; await TargetUdpLoader.loadMcsIntegration('D:/temp/acore-original-repro-20260618-1705/application/inter_linux','armv8a_64',conn,{log:console.log,onProgress:(m,p)=>console.log('[PROGRESS '+p+'%] '+m)}); console.log('[DONE]'); })().catch(e=>{console.error(e);process.exitCode=1;});"
+Set-Location '<local-path>'
+node -e "require('./out/test/vscodeTestHarness'); const { TargetUdpLoader } = require('./out/target/TargetUdpLoader'); (async () => { const conn={ip:'169.254.127.50',taPort:1118,timeout:20}; await TargetUdpLoader.loadMcsIntegration('<local-path>','armv8a_64',conn,{log:console.log,onProgress:(m,p)=>console.log('[PROGRESS '+p+'%] '+m)}); console.log('[DONE]'); })().catch(e=>{console.error(e);process.exitCode=1;});"
 ```
 
 ## 10. 最终证据
@@ -426,7 +426,7 @@ Packets: Sent = 4, Received = 4, Lost = 0 (0% loss)
 ARP: 169.254.127.51 -> 2A-98-5A-42-00-00
 ```
 
-## 11. 验收标准
+## 11. 成功标准
 
 | 层级 | 必须满足 |
 | --- | --- |
@@ -442,25 +442,3 @@ ARP: 169.254.127.51 -> 2A-98-5A-42-00-00
 | IP | `169.254.127.51/16` 位于 `eth0` |
 | Windows | reply 来自 `169.254.127.51`，4/4 |
 | ARP | `.51` 对应 guest MAC，并非全 0 |
-
-## 12. 难点与相关知识
-
-1. **同一日志跨越三个软件层。** MSL、hypervisor 和 Linux 共用串口，需根据阶段选择 loader、QEMU、kernel 或 rootfs。
-2. **DT 是硬件契约。** DT 声明存在的设备会触发 probe；QEMU 未实现时会等待或异常。SATA、MMC 和 display 都属于这一类。本次通过运行期修改内存 DTB 让 Linux 只看到当前虚拟机实现过的设备。
-3. **最后一行不一定是故障函数。** PL011 交接处停止输出时，后续实际失败点可能已经发生但没有打印出来；未配对 initcall、panic call trace 和 A/B 对照更可靠。
-4. **built-in 与 module 影响 early boot。** transport 为 built-in、net driver 为 module 时，接口创建仍依赖 rootfs。最终网络路径是 Windows TAP、QEMU Cadence GEM、ACore netswitch、Linux virtio-mmio、`eth0`，需要分别确认。
-5. **NTFS 不适合这份 kernel tree。** 大小写冲突和符号链接语义会改变源码结构，WSL ext4 保留 Linux 文件系统行为。
-6. **产物有两级封装。** 更新 kernel/rootfs 或 `vmLinux.c` 后必须重建 gos5，再重建 inter_linux，并比较 SHA-256。
-7. **TAP 提供二层连接。** host 与 guest 在同一 /16 内不需要 gateway；ARP 验证二层，ping 验证 IP/ICMP。
-8. **Windows DLL 搜索顺序影响工具。** 无编译错误但 `cc1.exe` 退出，以及 QEMU `0xC0000409`，均通过明确设置 PATH 解决。
-
-## 13. 当前保留状态
-
-```text
-QEMU PID: 29988
-Serial: D:\temp\acore-original-repro-20260618-1705\serial-disable-display.log
-Loader: D:\temp\acore-original-repro-20260618-1705\udp-load-disable-display.log
-Guest: 169.254.127.51/16
-```
-
-最终验证后 QEMU 仍在运行，Windows 可以继续执行 `ping 169.254.127.51`。
