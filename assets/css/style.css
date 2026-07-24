@@ -141,8 +141,7 @@ body {
 }
 
 .post-list-taxonomy a,
-.post-taxonomy a,
-.post-taxonomy span {
+.post-taxonomy a {
   font-size: 0.72rem;
   color: var(--color-text-muted);
   border: 1px solid var(--color-border);
@@ -328,6 +327,8 @@ body {
 
 .category-section {
   margin-bottom: 3rem;
+  border-left: 2px solid var(--color-border);
+  padding-left: 1rem;
 }
 
 .category-section h2 {
@@ -338,12 +339,73 @@ body {
   text-transform: capitalize;
 }
 
+.category-subsection {
+  margin-top: 1rem;
+  padding-left: 1rem;
+  border-left: 1px solid var(--color-border);
+}
+
+.category-subsection h3,
+.category-subsection h4 {
+  font-family: var(--font-sans);
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+  text-transform: capitalize;
+}
+
+.category-subsection h3 {
+  font-size: 0.98rem;
+}
+
+.category-subsection h4 {
+  font-size: 0.9rem;
+  color: var(--color-text-muted);
+}
+
+.category-subsection.nested {
+  margin-top: 0.8rem;
+}
+
 .post-list.compact .post-list-item {
   padding: 0.9rem 0;
 }
 
 .post-list.compact .post-list-title {
   font-size: 1rem;
+}
+
+/* ---- Tags ---- */
+
+.tag-cloud {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  margin-bottom: 2.5rem;
+}
+
+.tag-cloud a {
+  font-size: 0.8rem;
+  color: var(--color-text-muted);
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  padding: 0.16rem 0.55rem;
+  text-decoration: none;
+}
+
+.tag-cloud a:hover {
+  color: var(--color-accent);
+  border-color: var(--color-accent);
+}
+
+.tag-section {
+  margin-bottom: 2.5rem;
+}
+
+.tag-section h2 {
+  font-family: var(--font-sans);
+  font-size: 1.05rem;
+  font-weight: 600;
+  margin-bottom: 0.6rem;
 }
 
 /* ---- Footer ---- */

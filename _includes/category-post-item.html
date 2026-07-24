@@ -1,0 +1,6 @@
+<li class="post-list-item">
+  <a href="{{ include.post.url | relative_url }}">
+    <h3 class="post-list-title">{{ include.post.title }}</h3>
+  </a>
+  <span class="post-list-date">{{ include.post.date | date: "%B %-d, %Y" }}</span>
+</li>

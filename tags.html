@@ -1,0 +1,35 @@
+---
+layout: default
+title: Tags
+permalink: /tags/
+---
+
+<section class="tags-page">
+  <header class="page-header">
+    <h1>Tags</h1>
+    <p>Browse posts by keyword.</p>
+  </header>
+
+  <div class="tag-cloud">
+    {% assign sorted_tags = site.tags | sort %}
+    {% for tag in sorted_tags %}
+    {% assign tag_name = tag[0] %}
+    <a href="#{{ tag_name | slugify }}">{{ tag_name }}</a>
+    {% endfor %}
+  </div>
+
+  <div class="tag-index">
+    {% for tag in sorted_tags %}
+    {% assign tag_name = tag[0] %}
+    {% assign tag_posts = tag[1] %}
+    <section class="tag-section" id="{{ tag_name | slugify }}">
+      <h2>{{ tag_name }}</h2>
+      <ul class="post-list compact">
+        {% for post in tag_posts %}
+        {% include category-post-item.html post=post %}
+        {% endfor %}
+      </ul>
+    </section>
+    {% endfor %}
+  </div>
+</section>

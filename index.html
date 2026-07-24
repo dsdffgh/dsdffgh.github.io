@@ -16,9 +16,9 @@ title: Home
       <span class="post-list-date">{{ post.date | date: "%B %-d, %Y" }}</span>
       {% if post.categories %}
       <div class="post-list-taxonomy">
-        {% for category in post.categories %}
-        <a href="{{ '/categories/#' | append: category | slugify | relative_url }}">{{ category }}</a>
-        {% endfor %}
+        {% assign category_path = post.categories | join: " / " %}
+        {% assign category_anchor = post.categories | join: "-" | slugify %}
+        <a href="{{ '/categories/#' | append: category_anchor | relative_url }}">{{ category_path }}</a>
       </div>
       {% endif %}
       {% if post.excerpt %}
