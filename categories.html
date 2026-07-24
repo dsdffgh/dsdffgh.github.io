@@ -1,0 +1,33 @@
+---
+layout: default
+title: Categories
+permalink: /categories/
+---
+
+<section class="categories-page">
+  <header class="page-header">
+    <h1>Categories</h1>
+    <p>Browse posts by topic.</p>
+  </header>
+
+  <div class="category-index">
+    {% assign sorted_categories = site.categories | sort %}
+    {% for category in sorted_categories %}
+    {% assign category_name = category[0] %}
+    {% assign category_posts = category[1] %}
+    <section class="category-section" id="{{ category_name | slugify }}">
+      <h2>{{ category_name }}</h2>
+      <ul class="post-list compact">
+        {% for post in category_posts %}
+        <li class="post-list-item">
+          <a href="{{ post.url | relative_url }}">
+            <h3 class="post-list-title">{{ post.title }}</h3>
+          </a>
+          <span class="post-list-date">{{ post.date | date: "%B %-d, %Y" }}</span>
+        </li>
+        {% endfor %}
+      </ul>
+    </section>
+    {% endfor %}
+  </div>
+</section>

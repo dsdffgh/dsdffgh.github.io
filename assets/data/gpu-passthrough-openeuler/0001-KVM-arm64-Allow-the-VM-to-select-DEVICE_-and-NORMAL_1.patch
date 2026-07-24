@@ -1,0 +1,169 @@
+From e23c73026494bdfe6d67fab8c45a57624522a85c Mon Sep 17 00:00:00 2001
+From: "peterguo97@163.com" <peterguo97@163.com>
+Date: Sun, 7 Apr 2024 15:56:12 +0800
+Subject: [PATCH] KVM: arm64: Allow the VM to select DEVICE_* and NORMAL_NC for
+ IO memory
+
+---
+ arch/arm64/include/asm/kvm_pgtable.h |  2 ++
+ arch/arm64/include/asm/memory.h      |  2 ++
+ arch/arm64/kvm/hyp/pgtable.c         | 23 ++++++++++++++++++-----
+ arch/arm64/kvm/mmu.c                 | 10 ++++++++--
+ drivers/vfio/pci/vfio_pci.c          |  2 +-
+ include/linux/mm.h                   | 14 ++++++++++++++
+ 6 files changed, 45 insertions(+), 8 deletions(-)
+
+diff --git a/arch/arm64/include/asm/kvm_pgtable.h b/arch/arm64/include/asm/kvm_pgtable.h
+index f5dff6d40529..ec09b16d35e5 100644
+--- a/arch/arm64/include/asm/kvm_pgtable.h
++++ b/arch/arm64/include/asm/kvm_pgtable.h
+@@ -35,6 +35,7 @@ struct kvm_pgtable {
+  * @KVM_PGTABLE_PROT_W:		Write permission.
+  * @KVM_PGTABLE_PROT_R:		Read permission.
+  * @KVM_PGTABLE_PROT_DEVICE:	Device attributes.
++ * @KVM_PGTABLE_PROT_NORMAL_NC:	Normal noncacheable attributes.
+  * @KVM_PGTABLE_PROT_PBHA0:	Page-Based Hardware Attribute 0.
+  * @KVM_PGTABLE_PROT_PBHA1:	Page-Based Hardware Attribute 1.
+  * @KVM_PGTABLE_PROT_PBHA2:	Page-Based Hardware Attribute 2.
+@@ -46,6 +47,7 @@ enum kvm_pgtable_prot {
+ 	KVM_PGTABLE_PROT_R			= BIT(2),
+ 
+ 	KVM_PGTABLE_PROT_DEVICE			= BIT(3),
++	KVM_PGTABLE_PROT_NORMAL_NC		= BIT(4),
+ 
+ 	KVM_PGTABLE_PROT_PBHA0			= BIT(59),
+ 	KVM_PGTABLE_PROT_PBHA1			= BIT(60),
+diff --git a/arch/arm64/include/asm/memory.h b/arch/arm64/include/asm/memory.h
+index 644cfa3284a7..f86e68fa7ff9 100644
+--- a/arch/arm64/include/asm/memory.h
++++ b/arch/arm64/include/asm/memory.h
+@@ -143,6 +143,7 @@
+  * Memory types for Stage-2 translation
+  */
+ #define MT_S2_NORMAL		0xf
++#define MT_S2_NORMAL_NC		0x5
+ #define MT_S2_DEVICE_nGnRE	0x1
+ 
+ /*
+@@ -150,6 +151,7 @@
+  * Stage-2 enforces Normal-WB and Device-nGnRE
+  */
+ #define MT_S2_FWB_NORMAL	6
++#define MT_S2_FWB_NORMAL_NC	5
+ #define MT_S2_FWB_DEVICE_nGnRE	1
+ 
+ #ifdef CONFIG_ARM64_4K_PAGES
+diff --git a/arch/arm64/kvm/hyp/pgtable.c b/arch/arm64/kvm/hyp/pgtable.c
+index a78928951fbd..7478914f7c3f 100644
+--- a/arch/arm64/kvm/hyp/pgtable.c
++++ b/arch/arm64/kvm/hyp/pgtable.c
+@@ -443,15 +443,28 @@ struct stage2_map_data {
+ static int stage2_map_set_prot_attr(enum kvm_pgtable_prot prot,
+ 				    struct stage2_map_data *data)
+ {
+-	bool device = prot & KVM_PGTABLE_PROT_DEVICE;
+-	kvm_pte_t attr = device ? PAGE_S2_MEMATTR(DEVICE_nGnRE) :
+-			    PAGE_S2_MEMATTR(NORMAL);
++	kvm_pte_t attr;
+ 	u32 sh = KVM_PTE_LEAF_ATTR_LO_S2_SH_IS;
++	switch (prot & (KVM_PGTABLE_PROT_DEVICE |
++			KVM_PGTABLE_PROT_NORMAL_NC)) {
++	case KVM_PGTABLE_PROT_DEVICE | KVM_PGTABLE_PROT_NORMAL_NC:
++		return -EINVAL;
++	case KVM_PGTABLE_PROT_DEVICE:
++		if (prot & KVM_PGTABLE_PROT_X)
++			return -EINVAL;
++		attr = PAGE_S2_MEMATTR(DEVICE_nGnRE);
++		break;
++	case KVM_PGTABLE_PROT_NORMAL_NC:
++		if (prot & KVM_PGTABLE_PROT_X)
++			return -EINVAL;
++		attr = PAGE_S2_MEMATTR(NORMAL_NC);
++		break;
++	default:
++		attr = PAGE_S2_MEMATTR(NORMAL);
++	}
+ 
+ 	if (!(prot & KVM_PGTABLE_PROT_X))
+ 		attr |= KVM_PTE_LEAF_ATTR_HI_S2_XN;
+-	else if (device)
+-		return -EINVAL;
+ 
+ 	if (prot & KVM_PGTABLE_PROT_R)
+ 		attr |= KVM_PTE_LEAF_ATTR_LO_S2_S2AP_R;
+diff --git a/arch/arm64/kvm/mmu.c b/arch/arm64/kvm/mmu.c
+index 6fa92a1435a5..11a5debf510a 100644
+--- a/arch/arm64/kvm/mmu.c
++++ b/arch/arm64/kvm/mmu.c
+@@ -774,7 +774,7 @@ static int user_mem_abort(struct kvm_vcpu *vcpu, phys_addr_t fault_ipa,
+ 	int ret = 0;
+ 	bool write_fault, writable, force_pte = false;
+ 	bool exec_fault;
+-	bool device = false;
++	bool device = false, vfio_allow_any_uc = false;
+ 	unsigned long mmu_seq;
+ 	struct kvm *kvm = vcpu->kvm;
+ 	struct kvm_mmu_memory_cache *memcache = &vcpu->arch.mmu_page_cache;
+@@ -851,6 +851,9 @@ static int user_mem_abort(struct kvm_vcpu *vcpu, phys_addr_t fault_ipa,
+ 		fault_ipa &= ~(vma_pagesize - 1);
+ 
+ 	gfn = fault_ipa >> PAGE_SHIFT;
++
++	vfio_allow_any_uc = vma->vm_flags & VM_ALLOW_ANY_UNCACHED;
++
+ 	mmap_read_unlock(current->mm);
+ 
+ 	/*
+@@ -933,7 +936,10 @@ static int user_mem_abort(struct kvm_vcpu *vcpu, phys_addr_t fault_ipa,
+ 	}
+ 
+ 	if (device)
+-		prot |= KVM_PGTABLE_PROT_DEVICE;
++		if (vfio_allow_any_uc)
++			prot |= KVM_PGTABLE_PROT_NORMAL_NC;
++		else
++			prot |= KVM_PGTABLE_PROT_DEVICE;
+ 	else if (cpus_have_const_cap(ARM64_HAS_CACHE_DIC))
+ 		prot |= KVM_PGTABLE_PROT_X;
+ 
+diff --git a/drivers/vfio/pci/vfio_pci.c b/drivers/vfio/pci/vfio_pci.c
+index c04b34247067..e144ede22be8 100644
+--- a/drivers/vfio/pci/vfio_pci.c
++++ b/drivers/vfio/pci/vfio_pci.c
+@@ -1786,7 +1786,7 @@ int vfio_pci_mmap(void *device_data, struct vm_area_struct *vma)
+ 	 * See remap_pfn_range(), called from vfio_pci_fault() but we can't
+ 	 * change vm_flags within the fault handler.  Set them now.
+ 	 */
+-	vma->vm_flags |= VM_IO | VM_PFNMAP | VM_DONTEXPAND | VM_DONTDUMP;
++	vma->vm_flags |= VM_ALLOW_ANY_UNCACHED | VM_IO | VM_PFNMAP | VM_DONTEXPAND | VM_DONTDUMP;
+ 	vma->vm_ops = &vfio_pci_mmap_ops;
+ 
+ 	return 0;
+diff --git a/include/linux/mm.h b/include/linux/mm.h
+index 2ad509486cad..0aa3d18d319b 100644
+--- a/include/linux/mm.h
++++ b/include/linux/mm.h
+@@ -402,6 +402,20 @@ extern unsigned int kobjsize(const void *objp);
+ # define VM_GROWSUP	VM_NONE
+ #endif
+ 
++/*
++ * This flag is used to connect VFIO to arch specific KVM code. It
++ * indicates that the memory under this VMA is safe for use with any
++ * non-cachable memory type inside KVM. Some VFIO devices, on some
++ * platforms, are thought to be unsafe and can cause machine crashes
++ * if KVM does not lock down the memory type.
++ */
++#ifdef CONFIG_64BIT
++#define VM_ALLOW_ANY_UNCACHED_BIT	39
++#define VM_ALLOW_ANY_UNCACHED		BIT(VM_ALLOW_ANY_UNCACHED_BIT)
++#else
++#define VM_ALLOW_ANY_UNCACHED		VM_NONE
++#endif
++
+ /* Bits set in the VMA until the stack is in its final location */
+ #define VM_STACK_INCOMPLETE_SETUP	(VM_RAND_READ | VM_SEQ_READ)
+ 
+-- 
+2.25.1
+

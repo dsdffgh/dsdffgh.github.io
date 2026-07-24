@@ -7,6 +7,16 @@ layout: default
     <time class="post-date" datetime="{{ page.date | date_to_xmlschema }}">
       {{ page.date | date: "%B %-d, %Y" }}
     </time>
+    {% if page.categories or page.tags %}
+    <div class="post-taxonomy">
+      {% for category in page.categories %}
+      <a href="{{ '/categories/#' | append: category | slugify | relative_url }}">{{ category }}</a>
+      {% endfor %}
+      {% for tag in page.tags %}
+      <span>{{ tag }}</span>
+      {% endfor %}
+    </div>
+    {% endif %}
   </header>
   <div class="post-content">
     {{ content }}
