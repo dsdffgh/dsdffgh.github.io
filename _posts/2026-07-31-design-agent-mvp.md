@@ -5,11 +5,11 @@ categories: [llm, agent]
 tags: ["Codex", "Ollama", "Gemma 3", "Agent", "Prompt Engineering"]
 ---
 
-最近我尝试用 Codex 做一个 research agent 的 MVP。目标并非直接做一个完整产品，我更关心在相对复杂的工程场景里，怎么设计才更容易得到可验证、可迭代、边界清楚的代码。
+最近我尝试用 Codex 做一个 research agent 的 MVP。目标并非直接做一个完整产品，而是在相对复杂的工程场景里，怎么设计才更容易得到可验证、可迭代、边界清楚的代码。
 
-这个 agent 的目标是：用户输入一个 research query，agent 能进行本地搜索，读取搜索结果，再输出结构化答案。后续希望支持多 provider、工具调用、可中断恢复、结果追溯、上下文压缩、session event log、branch history、debug timeline 等能力。但第一版只要求跑通最小可运行路径。
+这个 agent 的目标是：用户输入一个 research query，agent 能进行本地搜索，读取搜索结果，再输出结构化答案。后续希望支持多 provider、工具调用、可中断恢复、结果追溯、上下文压缩、session event log、branch history、debug timeline 等能力。但第一版只要求跑通mvp。
 
-我一共用了三组提示词和三个 Codex 任务来做这个实验。它们不算严格意义上的同题平行对比，更像一次连续修正：从宽泛架构设计，到要求先做 MVP，再到隔离工作树里从空目录开始实现。这个过程里最有价值的地方，在于提示词边界的变化如何影响代码质量。
+我一共用了三组提示词和三个 Codex 任务来做这个实验。
 
 ## 第一次：架构提示词太宽，计划很完整，但容易拖慢实现
 
@@ -39,9 +39,9 @@ provider timeout、tool timeout、context overflow、provider capability mismatc
 每个阶段代码量不可过大，并且要有严格的 docs 描述架构设计、任务面板、代码和提交规范。
 ```
 
-这个提示词的优点是信息充足。它把分层、错误、停止策略、session、context compaction、branch tree 都说清楚了，所以 Codex 产出的设计文档方向基本正确。问题是它的范围太大，模型很自然地会输出一份覆盖长期目标的长计划，当前可运行功能的优先级反而不够高。第一次输出里架构意识是有的，但离“马上写一个可验证 MVP”还有距离。
+这个提示词把分层、错误、停止策略、session、context compaction、branch tree 这些我所了解的部分都尽可能了，所以 Codex 产出的设计文档方向基本正确。问题是它的范围太大，模型很自然地会输出一份覆盖长期目标的长计划，当前可运行功能的优先级反而不够高。
 
-这次的代码落在 `E:\GitClone\agent`，分支是 `feature/research-agent-mvp`。后续它确实演进出了一套可运行代码：有 canonical message、fake provider、Ollama provider、loop、runtime、shell_search、CLI、单元测试、集成测试和 E2E 测试。验证结果是：
+后续它确实演进出了一套可运行代码：有 canonical message、fake provider、Ollama provider、loop、runtime、shell_search、CLI、单元测试、集成测试和 E2E 测试。验证结果是：
 
 ```text
 30 passed, 1 skipped
@@ -60,7 +60,6 @@ uv run research-agent run `
 
 实际输出仍然回答了 fixture repo 的 `config_loader`，即使搜索结果没有命中，confidence 还是 `high`。这说明测试绿并不代表行为可靠。这里的问题不在语法或工程结构，而在默认 deterministic provider 固定复用了原来的 fixture 答案，测试没有覆盖“无证据时不能继续给旧结论”的行为。
 
-第一次提示词的表现可以概括为：适合建立设计框架，不适合作为直接实现 MVP 的入口。它需要再加“当前阶段只允许做哪些事情、哪些能力只写文档、实现后必须跑哪些用户级命令”。
 
 ## 第二次：加入 MVP 约束，行为更保守，但能力还不完整
 
@@ -79,9 +78,9 @@ MVP 路径是：
 MVP plan 只保留当前要开发的任务项。
 ```
 
-这个提示词比第一次更有效，因为它把“完整架构”和“当前实现”分开了。完整设计可以保留在 `docs/architecture` 或 roadmap 里，但当前代码只服务于 MVP。这样模型不容易一边写 session、branch、resume，一边又写 provider，导致每个模块都只有半成品。
+这个提示词使得当前代码只服务于 MVP。但是有个问题是他把原本的完整计划删了【无语】。
 
-第二次实现落在 `E:\GitClone\agent-worktrees\isolated-worktree`。这个版本后来经过手动验证，修了几个很实际的问题：
+这个版本后来经过手动验证，修了几个很实际的问题：
 
 - fake provider 不再固定搜索 `setting.json|config_loader`
 - 搜索无命中时不会继续输出 `config_loader` 结论
@@ -98,8 +97,6 @@ ruff: All checks passed
 这个版本的行为比第一次保守。对 `what is about E:\GitClone\zlib-to-notebooklm` 这类 query，它返回低置信度和无证据说明，没有继续输出 fixture 的结论。这比错误自信更可接受。
 
 但它还有一个能力缺口：query 里出现的 `E:\GitClone\zlib-to-notebooklm` 没有被当作实际搜索目录。也就是说，它仍然只在 `--cwd` 指定的目录里查。用户把路径写进 query，本意通常是“去这个目录分析项目”，但这版只把路径拆成搜索词。这个行为不算错到离谱，但不符合直觉。
-
-第二次提示词的表现可以概括为：MVP 边界明显更好，测试也更贴近真实错误；但提示词里还应该明确“用户输入中的本地路径如何处理”，否则模型会把路径当普通文本。
 
 ## 第三次：空工作树从零开始，架构更干净，但搜索工具太弱
 
@@ -202,14 +199,6 @@ async for raw_event in self.provider.stream(messages):
 compileall: passed
 ```
 
-它还修了一个很关键的 provider 体验问题：`--provider ollama` 默认模型从写死的 `llama3.1` 改成了 `auto`，会读 `/api/tags` 选择本机已安装模型。Ollama HTTP 失败时，CLI 会输出简短错误，不打印 Python traceback。例如本机模型启动失败时，会输出类似：
-
-```text
-research-agent error: Ollama /api/chat returned HTTP 500: ...
-```
-
-这点比前两个更像一个真正 CLI 工具应该有的行为。
-
 不过第三版的 `shell_search` 相对弱。它没有固定 UTF-8 解码，也不会识别 query 中的本地目录。更重要的是，搜索无结果时仍然把 `No matches found.` 当作 evidence，并且 confidence 还是 `high`：
 
 ```json
@@ -226,8 +215,6 @@ research-agent error: Ollama /api/chat returned HTTP 500: ...
 ```
 
 这在结构上通过了 schema，但在语义上不合理。没有证据时应该是空 evidence，confidence 应该降低，limitations 应该说明搜索范围和查询策略的限制。
-
-第三次提示词的表现可以概括为：隔离环境和架构边界最好，Ollama 错误处理也更成熟；但工具结果建模和无证据语义没有要求清楚，所以模型只保证了“能输出 schema”，没有保证“schema 的内容可信”。
 
 ## 架构层面的重点
 
@@ -269,9 +256,7 @@ async for raw_event in self.provider.stream(messages):
 | `runtime` | 组织 prompt，维护本次运行 state，调用 loop，执行 tool，校验 final answer | 处理 provider 私有消息格式、持久化长期历史 |
 | `session` | 后续处理 settings/prompt 装配、append-only event log、resume、branch、debug timeline | 参与单轮模型输出分类、直接执行工具 |
 
-这里尤其要注意 `session`。三次实验里都提到了 session、resume、branch 和 context compaction，但 MVP 代码并没有真正实现这些能力。它们应该进入 architecture roadmap 和测试计划，不应该混进第一版代码。否则很容易出现一批只有名字、没有行为保证的模块。
-
-## 关键约束要进入测试
+## 根据ai判断：关键约束要进入测试
 
 agent 架构的质量不能只看“有没有分层”，还要看关键约束有没有被测试保护。这个实验里暴露出的几个问题都和约束缺失有关。
 
@@ -318,15 +303,9 @@ test_rg_line_parser_handles_windows_drive_colon
 
 第三次的提示词加了隔离工作树，从空目录开始做，工程边界反而更干净。它最像一个真正 research agent runtime 的骨架：streaming provider、loop executor、runtime、tool executor 分工明确。缺点是功能更薄，搜索工具和 evidence 语义还需要进一步加强。
 
-如果只按“最适合作为后续生产级演进的基础”来选，我会选第三版。它的 loop/provider/runtime 分层更贴近目标。然后把第一版和第二版里已经暴露出的 Windows、路径、无证据、文件名命中、CLI 编码等经验合并进去。
-
-如果只按“当前用户命令能覆盖多少场景”来选，第一版功能最多，但必须先修 fake provider 错误自信的问题。
-
-如果只按“回答是否保守可信”来选，第二版比第一版更好，因为无命中时不会继续复用旧答案。
-
 ## 代码是否合理
 
-从 MVP 角度看，三版都已经做到了“可以运行、可以测试、可以从 CLI 看结果”。这已经比只写文档强很多。但如果按 agent runtime 的长期目标看，还有几个必须修的点。
+从 MVP 角度看，三版都已经做到了“可以运行、可以测试、可以从 CLI 看结果”。但是：
 
 第一，provider 抽象要统一。第一、二版是 `complete()` 风格，第三版是 `stream()` 风格。考虑到原始目标明确提到 loop 层要处理流式消息，第三版的接口更合适。后续应该统一成 streaming provider，并把 fake provider、Ollama provider 都放到同一个事件协议上。
 
@@ -486,10 +465,3 @@ uv run research-agent run --query "what is about E:\GitClone\zlib-to-notebooklm"
 
 这个提示词的关键不在长度，而在于把模型容易误解的地方写成验收规则。比如“输出 JSON schema”不够，必须说清楚没有证据时 evidence 怎么办；“支持 shell_search”不够，必须说清楚本地路径、Windows 编码和 `rg` 输出解析；“先做 MVP”也不够，必须明确哪些长期能力只进文档，不进入当前代码。
 
-## 我从这次实验得到的判断
-
-在 agent 这种任务里，提示词最容易犯的错误是把长期愿景和当前阶段混在一起。模型会很努力地满足所有要求，但代码会变成“每个未来能力都出现一点”，测试却只能覆盖最顺利的一条路径。
-
-更好的写法是：先给长期架构，让模型知道边界；再给当前阶段，让模型知道今天只实现什么；最后给验收命令，让模型必须面对真实运行结果。尤其要写清楚反例：无证据不能自信回答，路径 query 不能只当普通文本，工具错误不能伪装成 evidence。
-
-这次三版实现里，我更愿意以第三版的 streaming loop 架构为基础，再吸收第一、二版暴露出来的真实 Windows 和 evidence 问题。对一个 research agent 来说，能回答很重要，但更重要的是知道自己有没有证据。

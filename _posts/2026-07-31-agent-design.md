@@ -30,7 +30,7 @@ messages -> loop -> runtime -> session
 | provider | `packages/ai` | `pi` 已经有统一多 provider API、retry、usage、provider hooks |
 | 产品层 | `packages/coding-agent` | `pi` 把 agent core 和 CLI/UI/具体工具分开 |
 
-这个对照说明，我最初定的四层方向是合理的。尤其第三版的 streaming provider 和 loop event 设计，和 `pi` 的低层 loop 更接近。问题是我的每层还比较薄，只规定了“谁负责什么”，没有深入到运行中的状态规则。
+这个对照说明，我最初定的四层方向是合理的。尤其第三版的 streaming provider 和 loop event 设计，和 `pi` 的低层 loop 更接近。问题是我的每层还比较薄，只规定了“谁负责什么”，没有深入到运行中的状态规则，还是对agent理解不够深入。总结下来：
 
 ## Loop：从两轮 MVP 到完整生命周期
 
@@ -157,11 +157,9 @@ compaction 未完成：如果没有 final compaction entry，可以重新执行
 branch navigation 未完成：根据 leaf entry 和 branch summary entry 判断是否继续完成
 ```
 
-这样写，resume 的边界会清楚很多。
-
 ## Compaction：不能只说 tool_call 和 tool_result 成对
 
-我之前最关注的 compaction 约束是：`tool_call` 和 `tool_result` 必须成对保留。这个约束很重要，但完整 compaction 还要考虑更多。
+我之前最关注的 compaction 约束是：`tool_call` 和 `tool_result` 必须成对保留。但完整 compaction 还要考虑更多。
 
 `pi` 的 compaction 设计包含这些元素：
 
@@ -176,7 +174,7 @@ branch navigation 未完成：根据 leaf entry 和 branch summary entry 判断�
 - 记录 file operation details
 - 生成 branch summary
 
-这里最值得学的是：compaction 不应该直接对 message array 做简单裁剪，而应该基于 session entries 和 turn boundary 做选择。否则很容易破坏上下文结构。
+compaction 不应该直接对 message array 做简单裁剪，而应该基于 session entries 和 turn boundary 做选择。否则很容易破坏上下文结构。
 
 我的 design 可以把 compaction 分成三个阶段：
 
@@ -202,7 +200,7 @@ previousSummary
 
 ## Tool：工具生命周期要比 shell_search 更完整
 
-我的 MVP 只有一个 `shell_search`。它已经暴露出不少真实问题：Windows 路径、UTF-8、`rg` 输出解析、无证据语义。对 research agent 来说，这些问题很重要，但它们属于具体工具的正确性。工具系统本身还需要更完整的生命周期。
+我的 MVP 只有一个 `shell_search`。它已经暴露出不少真实问题：Windows 路径、UTF-8、`rg` 输出解析、无证据语义。对 research agent 来说，这些问题属于具体工具的正确性。工具系统本身还需要更完整的生命周期。
 
 `pi` 的工具定义有：
 
@@ -266,7 +264,7 @@ headers
 
 这对 research agent 很重要。因为它会读本地文件，工具结果里可能有路径、源码、配置甚至敏感内容。如果 debug timeline 默认记录全量 prompt 和 tool output，很快就会变成安全风险。比较合理的做法是：timeline 默认记录事件和摘要，内容捕获必须显式开启，并允许 redaction。
 
-## 当前设计应该怎么改
+## 当前设计修正方向
 
 对照 `pi` 后，我会把自己的 research agent roadmap 调整成下面这样。
 
@@ -330,61 +328,11 @@ headers
 
 这样排下来，MVP 不会一下子变成大型 harness，但每一步都和最终架构能接上。
 
-## 下篇提示词应该怎么写
-
-如果要让 Codex 按这个方向继续实现，提示词不能只说“参考 pi”。这样模型很可能直接模仿目录结构，或者引入过多当前阶段不需要的东西。更好的写法是指定要借鉴的机制，并限制当前阶段只实现一件事。
-
-比如下一阶段可以这样写：
-
-```md
-继续当前 research agent 项目。
-
-参考 E:\GitClone\pi 的 agent loop 思路，但不要复制 pi 的目录结构，也不要一次性实现 harness/session/compaction。
-
-当前阶段只做 loop lifecycle events。
-
-目标：
-把现有 LoopExecutor / AgentRuntime 从只返回最终结果，扩展为稳定发出生命周期事件：
-- agent_start
-- turn_start
-- message_start
-- message_update
-- message_end
-- tool_execution_start
-- tool_execution_update
-- tool_execution_end
-- turn_end
-- agent_end
-
-边界：
-- 不实现 session persistence
-- 不实现 compaction
-- 不实现 branch
-- 不实现 multi-provider registry
-- 不改变 shell_search 的业务逻辑，除非现有测试要求
-
-要求：
-1. 新增 AgentEvent schema。
-2. Runtime 在执行 MVP 流程时按确定顺序记录 events。
-3. Provider stream delta 对应 message_update。
-4. tool_call 前后必须有 tool_execution_start / tool_execution_end。
-5. tool result 作为 message_start / message_end 进入事件流。
-6. 当前 CLI 输出不变。
-7. 新增测试断言完整事件顺序。
-8. 测试必须使用 deterministic provider，不依赖 Ollama。
-
-验收：
-uv run pytest -q
-uv run ruff check .
-uv run python -m compileall -q src tests
-```
-
-这个提示词的重点是：只借鉴机制，不复制整个系统；只做 lifecycle events，不同时碰 session 和 compaction。这样可以把成熟项目里的经验转成当前项目能承受的增量。
 
 ## 小结
 
 `pi` 对我当前设计最大的参考价值，是它把“agent 运行中发生了什么”变成了稳定的事件、快照和 session entry。相比之下，我的 MVP 还停在“能完成一次 research flow”。这个阶段已经够验证想法，但还不足以承载可恢复、可观测、多轮工具调用的 agent。
 
-如果继续做，我会以第三版的 streaming loop 作为骨架，把第一、二版暴露出的 Windows 和 evidence 问题修进去，然后按 `pi` 的经验逐步加入 lifecycle event、AgentMessage projection、turn snapshot、session tree、compaction plan 和 semi-durable resume。
+以第三版的 streaming loop 作为骨架，把第一、二版暴露出的 Windows 和 evidence 问题修进去，然后按 `pi` 的经验逐步加入 lifecycle event、AgentMessage projection、turn snapshot、session tree、compaction plan 和 semi-durable resume，这样会比较好。
 
 最终目标并非把 `pi` 重新写一遍。更值得做的是提炼它已经证明有效的 runtime 语义，再用于一个更专注的 research agent。这个 agent 的特殊价值应该体现在 evidence policy、source provenance 和 structured final answer 上；通用 harness 机制可以向 `pi` 学，研究结果可信度这部分则要自己做得更严格。
