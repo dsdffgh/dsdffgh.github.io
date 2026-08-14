@@ -1,5 +1,5 @@
 ---
-title: "某定制 Linux 加载与 Windows TAP 网络排查记录"
+title: "某定制 Linux 移植到qemu与网络排查记录"
 date: 2026-07-24
 categories: [virtualization, qemu]
 tags: ["custom Linux", "QEMU", "TAP", "Windows", "troubleshooting"]
