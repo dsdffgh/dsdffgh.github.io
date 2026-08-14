@@ -410,10 +410,8 @@ html[data-theme="dark"] .theme-toggle-icon-light {
 
 .category-sidebar-button {
   display: inline-flex;
-  flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 0.22rem;
   position: fixed;
   left: 1rem;
   top: 50%;
@@ -430,12 +428,15 @@ html[data-theme="dark"] .theme-toggle-icon-light {
   box-shadow: 0 8px 24px var(--color-shadow);
 }
 
-.category-sidebar-button span {
+.category-sidebar-button svg {
   display: block;
-  width: 1rem;
-  height: 2px;
-  background: currentColor;
-  border-radius: 999px;
+  width: 1.15rem;
+  height: 1.15rem;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
 .category-sidebar-button:hover,
