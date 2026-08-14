@@ -1,0 +1,42 @@
+<input class="category-sidebar-toggle-input" type="checkbox" id="category-sidebar-toggle" aria-hidden="true">
+<label class="category-sidebar-button" for="category-sidebar-toggle" aria-label="Open category directory" title="目录">
+  <span></span>
+  <span></span>
+  <span></span>
+</label>
+<label class="category-sidebar-backdrop" for="category-sidebar-toggle" aria-label="Close category directory"></label>
+
+<aside class="category-sidebar" aria-label="Category directory">
+  <div class="category-sidebar-header">
+    <h2>目录</h2>
+    <label for="category-sidebar-toggle" aria-label="Close category directory">×</label>
+  </div>
+  <nav class="category-sidebar-nav">
+    {% assign sidebar_top_groups = site.posts | group_by_exp: "post", "post.categories[0]" | sort: "name" %}
+    {% for top_group in sidebar_top_groups %}
+    {% assign top_name = top_group.name %}
+    {% if top_name and top_name != "" %}
+    {% assign top_anchor = top_name | slugify %}
+    <a class="category-sidebar-top" href="{{ '/' | append: '#' | append: top_anchor | relative_url }}">{{ top_name }}</a>
+
+    {% assign sidebar_second_groups = top_group.items | group_by_exp: "post", "post.categories[1]" | sort: "name" %}
+    {% for second_group in sidebar_second_groups %}
+    {% assign second_name = second_group.name %}
+    {% if second_name and second_name != "" %}
+    {% assign second_anchor = top_name | append: '-' | append: second_name | slugify %}
+    <a class="category-sidebar-second" href="{{ '/' | append: '#' | append: second_anchor | relative_url }}">{{ second_name }}</a>
+
+    {% assign sidebar_third_groups = second_group.items | group_by_exp: "post", "post.categories[2]" | sort: "name" %}
+    {% for third_group in sidebar_third_groups %}
+    {% assign third_name = third_group.name %}
+    {% if third_name and third_name != "" %}
+    {% assign third_anchor = top_name | append: '-' | append: second_name | append: '-' | append: third_name | slugify %}
+    <a class="category-sidebar-third" href="{{ '/' | append: '#' | append: third_anchor | relative_url }}">{{ third_name }}</a>
+    {% endif %}
+    {% endfor %}
+    {% endif %}
+    {% endfor %}
+    {% endif %}
+    {% endfor %}
+  </nav>
+</aside>

@@ -6,25 +6,51 @@ title: Home
   <p>{{ site.description }}</p>
 </section>
 
-<section>
-  <ul class="post-list">
-    {% for post in site.posts %}
-    <li class="post-list-item">
-      <a href="{{ post.url | relative_url }}">
-        <h2 class="post-list-title">{{ post.title }}</h2>
-      </a>
-      <span class="post-list-date">{{ post.date | date: "%B %-d, %Y" }}</span>
-      {% if post.categories %}
-      <div class="post-list-taxonomy">
-        {% assign category_path = post.categories | join: " / " %}
-        {% assign category_anchor = post.categories | join: "-" | slugify %}
-        <a href="{{ '/categories/#' | append: category_anchor | relative_url }}">{{ category_path }}</a>
-      </div>
+<section class="home-category-index">
+  {% assign top_groups = site.posts | group_by_exp: "post", "post.categories[0]" | sort: "name" %}
+  {% for top_group in top_groups %}
+  {% assign top_name = top_group.name %}
+  {% if top_name and top_name != "" %}
+  <section class="category-section" id="{{ top_name | slugify }}">
+    <h2>{{ top_name }}</h2>
+
+    {% assign second_groups = top_group.items | group_by_exp: "post", "post.categories[1]" | sort: "name" %}
+    {% for second_group in second_groups %}
+    {% assign second_name = second_group.name %}
+    {% if second_name == nil or second_name == "" %}
+    <ul class="post-list compact">
+      {% for post in second_group.items %}
+      {% include category-post-item.html post=post %}
+      {% endfor %}
+    </ul>
+    {% else %}
+    <section class="category-subsection" id="{{ top_name | append: '-' | append: second_name | slugify }}">
+      <h3>{{ second_name }}</h3>
+
+      {% assign third_groups = second_group.items | group_by_exp: "post", "post.categories[2]" | sort: "name" %}
+      {% for third_group in third_groups %}
+      {% assign third_name = third_group.name %}
+      {% if third_name == nil or third_name == "" %}
+      <ul class="post-list compact">
+        {% for post in third_group.items %}
+        {% include category-post-item.html post=post %}
+        {% endfor %}
+      </ul>
+      {% else %}
+      <section class="category-subsection nested" id="{{ top_name | append: '-' | append: second_name | append: '-' | append: third_name | slugify }}">
+        <h4>{{ third_name }}</h4>
+        <ul class="post-list compact">
+          {% for post in third_group.items %}
+          {% include category-post-item.html post=post %}
+          {% endfor %}
+        </ul>
+      </section>
       {% endif %}
-      {% if post.excerpt %}
-      <p class="post-list-excerpt">{{ post.excerpt | strip_html | truncatewords: 30 }}</p>
-      {% endif %}
-    </li>
+      {% endfor %}
+    </section>
+    {% endif %}
     {% endfor %}
-  </ul>
+  </section>
+  {% endif %}
+  {% endfor %}
 </section>
