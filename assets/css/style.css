@@ -652,6 +652,22 @@ html[data-theme="dark"] .theme-toggle-icon-light {
   text-transform: capitalize;
 }
 
+.category-sidebar-post {
+  font-size: 0.72rem;
+}
+
+.category-sidebar-post-top {
+  margin-left: 0.8rem;
+}
+
+.category-sidebar-post-second {
+  margin-left: 1.6rem;
+}
+
+.category-sidebar-post-third {
+  margin-left: 2.4rem;
+}
+
 .category-section {
   margin-bottom: 3rem;
   border-left: 2px solid var(--color-border);
