@@ -10,6 +10,42 @@ permalink: /categories/
     <p>Browse posts by topic.</p>
   </header>
 
+  <input class="category-sidebar-toggle-input" type="checkbox" id="category-sidebar-toggle" aria-hidden="true">
+  <label class="category-sidebar-button" for="category-sidebar-toggle" aria-label="Open category directory">目录</label>
+  <label class="category-sidebar-backdrop" for="category-sidebar-toggle" aria-label="Close category directory"></label>
+
+  <aside class="category-sidebar" aria-label="Category directory">
+    <div class="category-sidebar-header">
+      <h2>目录</h2>
+      <label for="category-sidebar-toggle" aria-label="Close category directory">×</label>
+    </div>
+    <nav class="category-sidebar-nav">
+      {% assign sidebar_top_groups = site.posts | group_by_exp: "post", "post.categories[0]" | sort: "name" %}
+      {% for top_group in sidebar_top_groups %}
+      {% assign top_name = top_group.name %}
+      {% if top_name != "" %}
+      <a class="category-sidebar-top" href="#{{ top_name | slugify }}">{{ top_name }}</a>
+
+      {% assign sidebar_second_groups = top_group.items | group_by_exp: "post", "post.categories[1]" | sort: "name" %}
+      {% for second_group in sidebar_second_groups %}
+      {% assign second_name = second_group.name %}
+      {% if second_name != "" %}
+      <a class="category-sidebar-second" href="#{{ top_name | append: '-' | append: second_name | slugify }}">{{ second_name }}</a>
+
+      {% assign sidebar_third_groups = second_group.items | group_by_exp: "post", "post.categories[2]" | sort: "name" %}
+      {% for third_group in sidebar_third_groups %}
+      {% assign third_name = third_group.name %}
+      {% if third_name != "" %}
+      <a class="category-sidebar-third" href="#{{ top_name | append: '-' | append: second_name | append: '-' | append: third_name | slugify }}">{{ third_name }}</a>
+      {% endif %}
+      {% endfor %}
+      {% endif %}
+      {% endfor %}
+      {% endif %}
+      {% endfor %}
+    </nav>
+  </aside>
+
   <div class="category-index">
     {% assign top_groups = site.posts | group_by_exp: "post", "post.categories[0]" | sort: "name" %}
     {% for top_group in top_groups %}
