@@ -158,6 +158,17 @@ html[data-theme="dark"] .theme-toggle-icon-light {
   line-height: 1.8;
 }
 
+.category-anchor-map {
+  position: relative;
+  height: 0;
+  overflow: hidden;
+}
+
+.category-anchor-map span {
+  position: absolute;
+  top: -1rem;
+}
+
 .post-list {
   list-style: none;
 }
