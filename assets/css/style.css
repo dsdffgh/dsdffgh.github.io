@@ -105,21 +105,45 @@ body {
 
 .theme-toggle {
   margin-left: 1rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.9rem;
+  height: 1.9rem;
   padding: 0;
-  font: inherit;
-  font-size: 0.85rem;
-  font-weight: 500;
-  letter-spacing: 0.02em;
-  text-transform: uppercase;
   color: var(--color-text-muted);
   background: none;
-  border: 0;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
   cursor: pointer;
 }
 
 .theme-toggle:hover,
 .theme-toggle:focus-visible {
   color: var(--color-text);
+  border-color: var(--color-accent);
+}
+
+.theme-toggle-icon {
+  width: 1rem;
+  height: 1rem;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.theme-toggle-icon-light {
+  display: none;
+}
+
+html[data-theme="dark"] .theme-toggle-icon-dark {
+  display: none;
+}
+
+html[data-theme="dark"] .theme-toggle-icon-light {
+  display: block;
 }
 
 /* ---- Home / Post List ---- */

@@ -20,7 +20,7 @@
     var isDark = theme === 'dark';
     toggle.setAttribute('aria-pressed', String(isDark));
     toggle.setAttribute('aria-label', isDark ? 'Switch to light mode' : 'Switch to dark mode');
-    toggle.textContent = isDark ? 'Light' : 'Dark';
+    toggle.dataset.themeState = isDark ? 'dark' : 'light';
   }
 
   applyTheme(currentTheme(), false);
