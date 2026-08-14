@@ -234,10 +234,15 @@ html[data-theme="dark"] .theme-toggle-icon-light {
 }
 
 .post-list-excerpt {
+  display: -webkit-box;
+  max-height: 8em;
+  overflow: hidden;
   margin-top: 0.5rem;
   font-size: 0.92rem;
   color: var(--color-text-muted);
   line-height: 1.6;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 5;
 }
 
 /* ---- Single Post ---- */
@@ -615,10 +620,11 @@ html[data-theme="dark"] .theme-toggle-icon-light {
 .category-sidebar-nav {
   display: flex;
   flex-direction: column;
-  gap: 0.25rem;
+  gap: 0.15rem;
 }
 
-.category-sidebar-nav a {
+.category-sidebar-nav a,
+.category-sidebar-nav summary {
   color: var(--color-text-muted);
   text-decoration: none;
   border-radius: 6px;
@@ -628,9 +634,54 @@ html[data-theme="dark"] .theme-toggle-icon-light {
 }
 
 .category-sidebar-nav a:hover,
-.category-sidebar-nav a:focus-visible {
+.category-sidebar-nav a:focus-visible,
+.category-sidebar-nav summary:hover,
+.category-sidebar-nav summary:focus-visible {
   color: var(--color-accent);
   background: var(--color-surface);
+}
+
+.category-sidebar-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.category-sidebar-group summary {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  list-style: none;
+  cursor: pointer;
+}
+
+.category-sidebar-group summary::-webkit-details-marker {
+  display: none;
+}
+
+.category-sidebar-group summary::before {
+  content: "";
+  flex: 0 0 auto;
+  width: 0.38rem;
+  height: 0.38rem;
+  border-right: 1.5px solid currentColor;
+  border-bottom: 1.5px solid currentColor;
+  transform: rotate(-45deg);
+  transition: transform 140ms ease;
+}
+
+.category-sidebar-group[open] > summary::before {
+  transform: rotate(45deg);
+}
+
+.category-sidebar-group summary a {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 0;
+}
+
+.category-sidebar-group summary a:hover,
+.category-sidebar-group summary a:focus-visible {
+  background: none;
 }
 
 .category-sidebar-top {
@@ -641,31 +692,38 @@ html[data-theme="dark"] .theme-toggle-icon-light {
 }
 
 .category-sidebar-second {
-  margin-left: 0.8rem;
-  font-size: 0.82rem;
+  font-size: 0.78rem;
   text-transform: capitalize;
 }
 
 .category-sidebar-third {
-  margin-left: 1.6rem;
-  font-size: 0.76rem;
+  font-size: 0.74rem;
   text-transform: capitalize;
 }
 
 .category-sidebar-post {
-  font-size: 0.72rem;
+  display: block;
+  font-size: 0.74rem;
 }
 
 .category-sidebar-post-top {
-  margin-left: 0.8rem;
+  margin-left: 1.25rem;
 }
 
 .category-sidebar-post-second {
-  margin-left: 1.6rem;
+  margin-left: 2.25rem;
 }
 
 .category-sidebar-post-third {
-  margin-left: 2.4rem;
+  margin-left: 3.25rem;
+}
+
+.category-sidebar-group-second {
+  margin-left: 0.9rem;
+}
+
+.category-sidebar-group-third {
+  margin-left: 1rem;
 }
 
 .category-section {

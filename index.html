@@ -46,7 +46,7 @@ title: Home
       </div>
       {% endif %}
       {% if post.excerpt %}
-      <p class="post-list-excerpt">{{ post.excerpt | strip_html | truncatewords: 30 }}</p>
+      <p class="post-list-excerpt">{{ post.excerpt | strip_html }}</p>
       {% endif %}
     </li>
     {% endfor %}

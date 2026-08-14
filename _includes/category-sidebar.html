@@ -17,42 +17,54 @@
     {% assign top_name = top_group.name %}
     {% if top_name and top_name != "" %}
     {% assign top_anchor = top_name | slugify %}
-    <a class="category-sidebar-top" href="{{ '/' | append: '#' | append: top_anchor | relative_url }}">{{ top_name }}</a>
+    <details class="category-sidebar-group category-sidebar-group-top" open>
+      <summary>
+        <a class="category-sidebar-top" href="{{ '/' | append: '#' | append: top_anchor | relative_url }}">{{ top_name }}</a>
+      </summary>
 
-    {% for post in top_group.items %}
-    {% assign direct_second_name = post.categories[1] %}
-    {% if direct_second_name == nil or direct_second_name == "" %}
-    <a class="category-sidebar-post category-sidebar-post-top" href="{{ post.url | relative_url }}">{{ post.title }}</a>
-    {% endif %}
-    {% endfor %}
+      {% for post in top_group.items %}
+      {% assign direct_second_name = post.categories[1] %}
+      {% if direct_second_name == nil or direct_second_name == "" %}
+      <a class="category-sidebar-post category-sidebar-post-top" href="{{ post.url | relative_url }}">{{ post.title }}</a>
+      {% endif %}
+      {% endfor %}
 
-    {% assign sidebar_second_groups = top_group.items | group_by_exp: "post", "post.categories[1]" | sort: "name" %}
-    {% for second_group in sidebar_second_groups %}
-    {% assign second_name = second_group.name %}
-    {% if second_name and second_name != "" %}
-    {% assign second_anchor = top_name | append: '-' | append: second_name | slugify %}
-    <a class="category-sidebar-second" href="{{ '/' | append: '#' | append: second_anchor | relative_url }}">{{ second_name }}</a>
+      {% assign sidebar_second_groups = top_group.items | group_by_exp: "post", "post.categories[1]" | sort: "name" %}
+      {% for second_group in sidebar_second_groups %}
+      {% assign second_name = second_group.name %}
+      {% if second_name and second_name != "" %}
+      {% assign second_anchor = top_name | append: '-' | append: second_name | slugify %}
+      <details class="category-sidebar-group category-sidebar-group-second">
+        <summary>
+          <a class="category-sidebar-second" href="{{ '/' | append: '#' | append: second_anchor | relative_url }}">{{ second_name }}</a>
+        </summary>
 
-    {% for post in second_group.items %}
-    {% assign direct_third_name = post.categories[2] %}
-    {% if direct_third_name == nil or direct_third_name == "" %}
-    <a class="category-sidebar-post category-sidebar-post-second" href="{{ post.url | relative_url }}">{{ post.title }}</a>
-    {% endif %}
-    {% endfor %}
+        {% for post in second_group.items %}
+        {% assign direct_third_name = post.categories[2] %}
+        {% if direct_third_name == nil or direct_third_name == "" %}
+        <a class="category-sidebar-post category-sidebar-post-second" href="{{ post.url | relative_url }}">{{ post.title }}</a>
+        {% endif %}
+        {% endfor %}
 
-    {% assign sidebar_third_groups = second_group.items | group_by_exp: "post", "post.categories[2]" | sort: "name" %}
-    {% for third_group in sidebar_third_groups %}
-    {% assign third_name = third_group.name %}
-    {% if third_name and third_name != "" %}
-    {% assign third_anchor = top_name | append: '-' | append: second_name | append: '-' | append: third_name | slugify %}
-    <a class="category-sidebar-third" href="{{ '/' | append: '#' | append: third_anchor | relative_url }}">{{ third_name }}</a>
-    {% for post in third_group.items %}
-    <a class="category-sidebar-post category-sidebar-post-third" href="{{ post.url | relative_url }}">{{ post.title }}</a>
-    {% endfor %}
-    {% endif %}
-    {% endfor %}
-    {% endif %}
-    {% endfor %}
+        {% assign sidebar_third_groups = second_group.items | group_by_exp: "post", "post.categories[2]" | sort: "name" %}
+        {% for third_group in sidebar_third_groups %}
+        {% assign third_name = third_group.name %}
+        {% if third_name and third_name != "" %}
+        {% assign third_anchor = top_name | append: '-' | append: second_name | append: '-' | append: third_name | slugify %}
+        <details class="category-sidebar-group category-sidebar-group-third">
+          <summary>
+            <a class="category-sidebar-third" href="{{ '/' | append: '#' | append: third_anchor | relative_url }}">{{ third_name }}</a>
+          </summary>
+          {% for post in third_group.items %}
+          <a class="category-sidebar-post category-sidebar-post-third" href="{{ post.url | relative_url }}">{{ post.title }}</a>
+          {% endfor %}
+        </details>
+        {% endif %}
+        {% endfor %}
+      </details>
+      {% endif %}
+      {% endfor %}
+    </details>
     {% endif %}
     {% endfor %}
   </nav>
