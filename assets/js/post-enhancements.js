@@ -91,6 +91,79 @@
     }
   }
 
+  function titleFromAnchor(anchor, info) {
+    var text = anchor.textContent.trim();
+    if (!text || text === info.href) {
+      return info.origin + (info.path ? info.path : '');
+    }
+    if (text.indexOf('http://') === 0 || text.indexOf('https://') === 0) {
+      return info.origin + (info.path ? info.path : '');
+    }
+    return text;
+  }
+
+  function faviconUrl(href) {
+    try {
+      var parsed = new URL(href);
+      return 'https://www.google.com/s2/favicons?domain=' + encodeURIComponent(parsed.hostname) + '&sz=32';
+    } catch (error) {
+      return '';
+    }
+  }
+
+  function transformStandaloneLinks(root) {
+    if (!root) {
+      return;
+    }
+
+    root.querySelectorAll('p, li').forEach(function (block) {
+      if (block.querySelector('img, pre, code, table')) {
+        return;
+      }
+
+      var links = Array.prototype.slice.call(block.querySelectorAll('a[href^="http://"], a[href^="https://"]'));
+      if (links.length !== 1) {
+        return;
+      }
+
+      var anchor = links[0];
+      var text = block.textContent.trim();
+      var href = anchor.href;
+      var compactText = text.replace(/\s+/g, ' ');
+      var compactHref = anchor.textContent.trim().replace(/\s+/g, ' ');
+      var isBareLine = compactText === compactHref || compactText.length <= compactHref.length + 32;
+
+      if (!isBareLine) {
+        return;
+      }
+
+      var info = compactUrl(href);
+      var card = document.createElement('a');
+      card.href = href;
+      card.target = '_blank';
+      card.rel = 'noopener noreferrer';
+      card.className = 'inline-link-preview link-preview-anchor';
+
+      var icon = document.createElement('span');
+      icon.className = 'inline-link-preview-icon';
+      var image = document.createElement('img');
+      image.src = faviconUrl(href);
+      image.alt = '';
+      image.loading = 'lazy';
+      icon.appendChild(image);
+
+      var title = document.createElement('span');
+      title.className = 'inline-link-preview-title';
+      title.textContent = titleFromAnchor(anchor, info);
+
+      card.appendChild(icon);
+      card.appendChild(title);
+      block.textContent = '';
+      block.appendChild(card);
+      block.classList.add('inline-link-preview-block');
+    });
+  }
+
   function createPreview() {
     var preview = document.createElement('aside');
     preview.className = 'link-preview-card';
@@ -144,5 +217,6 @@
 
   linkifyPlainUrls(content);
   externalizeLinks(content);
+  transformStandaloneLinks(content);
   attachPreview(content);
 }());

@@ -428,6 +428,57 @@ html[data-theme="dark"] .theme-toggle-icon-light {
   overflow-wrap: anywhere;
 }
 
+.inline-link-preview-block {
+  margin: 0.7rem 0 1rem;
+}
+
+.post-content .inline-link-preview {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  max-width: 100%;
+  padding: 0.2rem 0;
+  color: var(--color-text);
+  text-decoration: none;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.post-content .inline-link-preview:hover,
+.post-content .inline-link-preview:focus-visible {
+  color: var(--color-accent);
+  border-bottom-color: var(--color-accent);
+}
+
+.inline-link-preview-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  width: 1.18rem;
+  height: 1.18rem;
+  color: #fff;
+  background: #f05a3b;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.inline-link-preview-icon img {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  border-radius: 0;
+}
+
+.inline-link-preview-title {
+  min-width: 0;
+  overflow: hidden;
+  font-family: var(--font-sans);
+  font-size: 0.9rem;
+  line-height: 1.35;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 /* ---- Categories ---- */
 
 .page-header {
