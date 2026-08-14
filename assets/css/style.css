@@ -300,6 +300,7 @@ html[data-theme="dark"] .theme-toggle-icon-light {
   color: var(--color-accent);
   text-decoration: underline;
   text-underline-offset: 2px;
+  overflow-wrap: anywhere;
 }
 
 .post-content a:hover {
@@ -382,6 +383,49 @@ html[data-theme="dark"] .theme-toggle-icon-light {
   border: none;
   border-top: 1px solid var(--color-border);
   margin: 2.5rem 0;
+}
+
+.link-preview-card {
+  position: absolute;
+  z-index: 60;
+  width: min(20rem, calc(100vw - 1.5rem));
+  padding: 0.8rem 0.9rem;
+  color: var(--color-text);
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  box-shadow: 0 14px 36px var(--color-sidebar-shadow);
+  opacity: 0;
+  transform: translateY(-4px);
+  pointer-events: none;
+  transition: opacity 120ms ease, transform 120ms ease;
+}
+
+.link-preview-card[aria-hidden="false"] {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.link-preview-label {
+  margin-bottom: 0.25rem;
+  font-size: 0.62rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  letter-spacing: 0.08em;
+}
+
+.link-preview-title {
+  font-size: 0.9rem;
+  font-weight: 600;
+  line-height: 1.35;
+}
+
+.link-preview-url {
+  margin-top: 0.25rem;
+  font-size: 0.76rem;
+  color: var(--color-text-muted);
+  line-height: 1.4;
+  overflow-wrap: anywhere;
 }
 
 /* ---- Categories ---- */
